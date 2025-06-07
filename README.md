@@ -1,6 +1,8 @@
-# Physiology RAG System
+# MedMind
 
-A comprehensive PDF-to-RAG (Retrieval-Augmented Generation) system designed specifically for physiology education. This system converts PDF documents to structured markdown, processes them into searchable chunks, and provides AI-powered question answering for medical students.
+**AI-Powered Medical Education Assistant**
+
+A comprehensive PDF-to-RAG (Retrieval-Augmented Generation) system designed specifically for physiology education. MedMind converts PDF documents to structured markdown, processes them into searchable chunks, and provides AI-powered question answering for medical students.
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -51,8 +53,8 @@ graph TD
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/physiology-rag.git
-cd physiology-rag
+git clone https://github.com/keentechcodes/MedMind.git
+cd MedMind
 
 # Install the package
 pip install -e .
@@ -214,8 +216,8 @@ pytest tests/test_rag_system.py
 ### Project Structure
 
 ```
-physiology_rag/
-├── physiology_rag/           # Main package
+MedMind/
+├── physiology_rag/           # Main package (MedMind core)
 │   ├── config/              # Configuration management
 │   ├── core/                # Core business logic
 │   ├── pdf_processing/      # PDF conversion
@@ -286,8 +288,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🆘 Support
 
 - 📚 [Documentation](docs/)
-- 🐛 [Bug Reports](https://github.com/yourusername/physiology-rag/issues)
-- 💬 [Discussions](https://github.com/yourusername/physiology-rag/discussions)
+- 🐛 [Bug Reports](https://github.com/keentechcodes/MedMind/issues)
+- 💬 [Discussions](https://github.com/keentechcodes/MedMind/discussions)
 
 ## 🙏 Acknowledgments
 
@@ -297,5 +299,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Streamlit](https://streamlit.io/) for the web interface
 
 ---
+
+**MedMind** - Empowering medical students with AI-powered learning
 
 Built with ❤️ for medical education
