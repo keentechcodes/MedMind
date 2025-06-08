@@ -145,6 +145,10 @@ cython_debug/
 # Claude Code
 .claude/
 
+# Claude development documentation
+CLAUDE.md
+cc_docs/
+
 # Obsidian
 .obsidian/
 

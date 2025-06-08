@@ -13,6 +13,17 @@ try:
 except ImportError:
     from pydantic import BaseSettings, validator
 
+from dotenv import load_dotenv
+
+# Load .env file from project root
+project_root = Path(__file__).parent.parent.parent
+env_path = project_root / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+else:
+    # Fallback to current directory
+    load_dotenv()
+
 
 class Settings(BaseSettings):
     """Application settings with environment variable support."""
@@ -63,8 +74,6 @@ class Settings(BaseSettings):
         return v
     
     class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
         case_sensitive = False
 
 

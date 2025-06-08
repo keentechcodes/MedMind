@@ -3,6 +3,7 @@
 # AI/ML Libraries
 google-generativeai>=0.3.0
 chromadb>=0.4.0
+pydantic-ai>=0.0.14
 
 # Configuration Management
 pydantic>=2.0.0

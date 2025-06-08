@@ -2,7 +2,7 @@
 
 **AI-Powered Medical Education Assistant**
 
-A comprehensive PDF-to-RAG (Retrieval-Augmented Generation) system designed specifically for physiology education. MedMind converts PDF documents to structured markdown, processes them into searchable chunks, and provides AI-powered question answering for medical students.
+A comprehensive AI-powered medical education platform designed specifically for physiology learning. MedMind features a **multi-agent architecture with PydanticAI** that provides personalized, adaptive learning experiences including intelligent tutoring, progress tracking, and contextual question answering for medical students.
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -10,37 +10,43 @@ A comprehensive PDF-to-RAG (Retrieval-Augmented Generation) system designed spec
 
 ## 🚀 Features
 
-- **📄 PDF Processing**: Convert physiology PDFs to structured markdown with image extraction
-- **🧠 AI-Enhanced**: Uses Google Gemini AI for enhanced PDF conversion and response generation
-- **🔍 Smart Chunking**: Metadata-aware document chunking based on table of contents
-- **💾 Vector Database**: ChromaDB for semantic search and retrieval
-- **💬 Interactive Chat**: Streamlit web interface for question answering
-- **📚 Source Attribution**: Detailed source citations with relevance scores
-- **🔧 Extensible**: Agent-ready architecture for future features (quiz, flashcards)
+- **🤖 Multi-Agent Architecture**: PydanticAI-powered Coordinator Agent with specialized learning agents
+- **🧠 Intelligent Tutoring**: Context-aware explanations with medical document integration
+- **📊 Learning Analytics**: User profiles, progress tracking, and adaptive difficulty adjustment
+- **📄 Advanced PDF Processing**: Convert physiology PDFs with enhanced metadata extraction
+- **🔍 Smart RAG System**: Metadata-aware chunking with semantic search and retrieval
+- **💾 Vector Database**: ChromaDB with Google Gemini embeddings for accurate content retrieval
+- **💬 Interactive Interfaces**: Both CLI and Streamlit web interfaces for learning
+- **🔧 Type-Safe Operations**: Comprehensive Pydantic models for validated agent interactions
 
 ## 🏗️ Architecture
 
-The system follows a four-stage pipeline:
+MedMind implements a **multi-agent architecture** with specialized AI agents coordinating to provide comprehensive learning experiences:
 
 ```mermaid
 graph TD
-    A[PDF Input] --> B[Marker-PDF + Gemini AI]
-    B --> C[Structured Markdown + Images + Metadata]
-    C --> D[Document Processor]
-    D --> E[Section-Aware Chunks]
-    E --> F[Embeddings Service]
-    F --> G[ChromaDB Vector Database]
-    G --> H[RAG System]
-    H --> I[Streamlit Chat Interface]
+    User[Medical Student] --> Coordinator[Coordinator Agent]
+    Coordinator --> Quiz[Quiz Agent]
+    Coordinator --> Progress[Progress Agent] 
+    Coordinator --> Tutor[Tutor Agent]
+    Coordinator --> Validation[Validation Agent]
+    
+    Quiz --> RAG[RAG System]
+    Tutor --> RAG
+    Validation --> Medical_DB[Medical Databases]
+    Progress --> Learning_DB[Learning Analytics DB]
+    
+    RAG --> Vector[ChromaDB Vector Database]
+    Vector --> Docs[Processed Medical Documents]
 ```
 
 ### Core Components
 
-- **PDF Processing**: `marker-pdf` library enhanced with Google Gemini AI
-- **Document Processing**: Intelligent chunking using metadata table-of-contents
-- **Vector Database**: Google Gemini embeddings + ChromaDB with cosine similarity
-- **RAG System**: Complete retrieval-augmented generation pipeline
-- **Web Interface**: Streamlit chat UI with conversation history
+- **Coordinator Agent**: Main orchestrator that routes requests and coordinates responses
+- **Medical Context System**: User profiles, learning analytics, and session management  
+- **RAG Foundation**: PDF processing, intelligent chunking, and vector search
+- **Type-Safe Operations**: Pydantic models for validated agent interactions
+- **CLI & Web Interfaces**: Interactive testing and learning environments
 
 ## 📦 Installation
 
@@ -123,18 +129,31 @@ rag-process
 rag-embed
 ```
 
-### 2. Launch the Chat Interface
+### 2. Try the Agent System
 
 ```bash
-# Start the Streamlit app
+# Interactive CLI with Coordinator Agent
+python -m physiology_rag.agents.cli
+
+# Or launch the Streamlit web interface
 streamlit run physiology_rag/ui/streamlit_app.py
 ```
 
-Visit `http://localhost:8501` to start asking questions!
+Try asking questions like:
+- "Explain how synaptic transmission works"
+- "What are the parts of the motor cortex?"
+- "Quiz me on neurophysiology" (shows agent capabilities)
 
 ### 3. Command Line Usage
 
 ```bash
+# Test the agent system
+python -c "
+import asyncio
+from physiology_rag.agents.cli import test_coordinator
+asyncio.run(test_coordinator())
+"
+
 # Test the RAG system
 rag-test
 
@@ -147,15 +166,31 @@ rag-embed
 
 ## 📚 Usage Examples
 
-### Python API
+### Agent API
+
+```python
+from physiology_rag.agents.coordinator import create_coordinator_agent
+from physiology_rag.core.rag_system import RAGSystem
+
+# Initialize the agent system
+rag_system = RAGSystem()
+coordinator, context = create_coordinator_agent(rag_system, user_id="student123")
+
+# Ask questions through the agent
+response = await coordinator.handle_conversation(
+    "Explain synaptic transmission", 
+    context
+)
+print(response)
+```
+
+### RAG System API
 
 ```python
 from physiology_rag.core.rag_system import RAGSystem
 
-# Initialize the system
+# Direct RAG usage
 rag = RAGSystem()
-
-# Ask a question
 result = rag.answer_question("What is the cerebral cortex?")
 
 print(result['answer'])
@@ -197,10 +232,13 @@ stats = embeddings.get_collection_stats()
 # Run all tests
 pytest
 
+# Test the agent system specifically
+pytest tests/test_agents/test_coordinator.py -v
+
 # Run tests with coverage
 pytest --cov=physiology_rag
 
-# Run specific test file
+# Test specific components
 pytest tests/test_rag_system.py
 ```
 
@@ -218,11 +256,13 @@ pytest tests/test_rag_system.py
 ```
 MedMind/
 ├── physiology_rag/           # Main package (MedMind core)
+│   ├── agents/              # ✅ PydanticAI agent implementations
+│   ├── dependencies/        # ✅ Shared context and medical data
+│   ├── models/              # ✅ Type-safe Pydantic models
 │   ├── config/              # Configuration management
-│   ├── core/                # Core business logic
+│   ├── core/                # Core RAG system logic
 │   ├── pdf_processing/      # PDF conversion
 │   ├── ui/                  # User interfaces
-│   ├── agents/              # Future AI agents
 │   └── utils/               # Utility functions
 ├── data/                    # Data storage
 │   ├── raw/                 # Input PDFs
@@ -230,6 +270,7 @@ MedMind/
 │   ├── vector_db/           # ChromaDB storage
 │   └── uploads/             # User uploads
 ├── tests/                   # Test suite
+│   └── test_agents/         # ✅ Agent integration tests
 ├── docs/                    # Documentation
 └── examples/                # Usage examples
 ```
@@ -265,11 +306,13 @@ Current implementation status:
 ✅ **Document Processing**: Metadata-aware chunking  
 ✅ **Vector Database**: ChromaDB with embeddings  
 ✅ **RAG System**: Complete Q&A pipeline  
-✅ **Streamlit Interface**: Interactive chat UI  
+✅ **Coordinator Agent**: PydanticAI foundation with working CLI
+✅ **Medical Context**: User profiles and learning analytics
+✅ **Type Safety**: Comprehensive Pydantic models
+✅ **Testing**: Agent test suite (13/14 tests passing)
 ✅ **Configuration**: Environment-based settings  
-✅ **Logging**: Comprehensive logging system  
-🔄 **Testing**: Basic test framework (in progress)  
-🔄 **Agents**: Quiz and flashcard agents (planned)  
+🔄 **Specialized Agents**: Quiz, Progress, Tutor, Validation (foundation ready)
+🔄 **UI Integration**: Connect agents to Streamlit interface  
 
 ## 🤝 Contributing
 
