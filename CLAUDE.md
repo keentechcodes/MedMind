@@ -4,55 +4,70 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a professionally structured PDF-to-Markdown conversion and RAG (Retrieval-Augmented Generation) system designed specifically for physiology lecture documents. The system converts PDFs to markdown, processes them into searchable chunks, and enables AI-powered question answering for medical students.
+This is a professionally structured AI-powered medical education platform designed specifically for physiology learning. The system uses a **multi-agent architecture with PydanticAI** to provide personalized, adaptive learning experiences including quiz generation, progress tracking, and intelligent tutoring for medical students.
 
-**🏗️ RESTRUCTURED PROJECT**: Now follows Python best practices with proper package structure, configuration management, and comprehensive documentation.
+**🤖 AGENTIC ARCHITECTURE**: Now implements specialized AI agents using PydanticAI framework for coordinated, intelligent learning assistance with type-safe operations and natural conversation flows.
 
 ## Architecture
 
-The codebase follows a four-stage pipeline:
+The system implements a **multi-agent architecture** with specialized AI agents coordinating to provide comprehensive learning experiences:
 
-1. **PDF Conversion**: Uses marker-pdf library with Google Gemini AI to convert PDFs to structured markdown with extracted images
-2. **Document Processing**: Chunks markdown content intelligently using metadata table-of-contents for optimal retrieval 
-3. **Vector Database**: Uses Google Gemini API embeddings and ChromaDB for semantic search and retrieval
-4. **RAG Interface**: Complete question-answering system with Streamlit chat interface
+1. **Coordinator Agent**: Main orchestrator that routes requests to specialized agents based on learning intent
+2. **Quiz Agent**: Generates adaptive quizzes with difficulty progression and detailed explanations
+3. **Progress Agent**: Tracks learning analytics, mastery scores, and spaced repetition scheduling
+4. **Tutor Agent**: Provides personalized explanations and contextual question answering
+5. **Validation Agent**: Ensures medical accuracy and fact-checking against authoritative sources
+
+**Foundation Components**:
+- **RAG System**: PDF processing, document chunking, and vector database (ChromaDB + Gemini embeddings)
+- **PydanticAI Framework**: Type-safe agent coordination with dependency injection and tool integration
+- **Learning Analytics**: SQLite-based progress tracking and adaptive algorithms
 
 ### Core Components
 
-**Structured Package Layout:**
+**Agentic Package Layout:**
+- `physiology_rag/agents/`: **PydanticAI agent implementations** (coordinator, quiz, progress, tutor, validation)
+- `physiology_rag/dependencies/`: **Shared context and data** (medical context, user profiles, RAG integration)
 - `physiology_rag/config/`: Configuration management with environment variables
-- `physiology_rag/core/`: Core business logic (document processing, embeddings, RAG)
-- `physiology_rag/pdf_processing/`: PDF conversion using marker-pdf with Gemini AI
-- `physiology_rag/ui/`: Streamlit chat interface
-- `physiology_rag/agents/`: Future AI agents (quiz, flashcard makers)
+- `physiology_rag/core/`: Foundation RAG system (document processing, embeddings, vector database)
+- `physiology_rag/learning/`: **Learning analytics** (progress tracking, spaced repetition, mastery scoring)
+- `physiology_rag/ui/`: Enhanced interface with agent integration
 - `physiology_rag/utils/`: Logging and utility functions
 
 **Key Features:**
+- ✅ **Multi-Agent Architecture**: Specialized PydanticAI agents for different learning tasks
+- ✅ **Adaptive Learning**: Quiz generation, progress tracking, spaced repetition
+- ✅ **Type-Safe Operations**: Pydantic models for validated inputs/outputs
+- ✅ **Conversational Memory**: Multi-turn interactions with context preservation
+- ✅ **Medical Validation**: Fact-checking and expert review workflows
 - ✅ **Environment-based Configuration**: No hardcoded API keys
-- ✅ **Comprehensive Logging**: Structured logging throughout
-- ✅ **Professional Documentation**: README, setup guides, API docs
-- ✅ **Testing Framework**: pytest with fixtures and coverage
-- ✅ **Modern Packaging**: pyproject.toml with proper dependencies
+- ✅ **Comprehensive Testing**: pytest with agent mocking and integration tests
 
-### Data Flow
+### Agentic Data Flow
 
+**Foundation Layer:**
 1. PDFs (`data/raw/`) → marker-pdf converter → Markdown + Images + Metadata (`data/processed/`)
-2. Markdown → DocumentProcessor → Section-based chunks → `data/processed/processed_documents.json`
-3. Chunks → EmbeddingsService → Vector embeddings → ChromaDB (`data/vector_db/`)
-4. Query → RAGSystem → Retrieval + Gemini generation → Answer with sources
+2. Markdown → DocumentProcessor → Section-based chunks → ChromaDB (`data/vector_db/`)
+
+**Agent Interaction Layer:**
+3. User Input → **Coordinator Agent** → Routes to appropriate specialist agent
+4. **Quiz Agent** → RAG retrieval + question generation → Structured quiz output
+5. **Progress Agent** → Learning analytics + mastery tracking → Progress updates
+6. **Tutor Agent** → Contextual explanation + source attribution → Educational response
+7. All interactions → **Learning Database** (`data/user_data/`) → Personalization data
 
 ## Key Commands
 
 ### Environment Setup
 ```bash
-# Install the package and dependencies
+# Install the package and dependencies (includes PydanticAI)
 pip install -e .
 
 # Copy environment template and configure
 cp .env.example .env
 # Edit .env with your GEMINI_API_KEY
 
-# Development setup (optional)
+# Development setup with PydanticAI testing tools
 pip install -e .[dev]
 ```
 
@@ -61,23 +76,25 @@ pip install -e .[dev]
 # Complete system setup (one command!)
 python scripts/setup.py
 
-# Launch Streamlit chat interface
+# Launch MedMind with agent coordination
 streamlit run physiology_rag/ui/streamlit_app.py
+
+# Or use the coordinator agent directly
+python -m physiology_rag.agents.coordinator
 ```
 
-### Individual Components
+### Agent Commands
 ```bash
-# Process documents only
-rag-process
+# Test individual agents
+medmind-quiz --topic "neurophysiology" --count 5
+medmind-progress --user-id "student123"
+medmind-tutor --question "How does synaptic transmission work?"
 
-# Create embeddings only
-rag-embed
+# Run agent integration tests
+pytest tests/test_agents/
 
-# Test RAG system
-rag-test
-
-# Run tests
-pytest
+# Test agent coordination
+pytest tests/test_agent_coordination.py
 ```
 
 ### Development Commands
