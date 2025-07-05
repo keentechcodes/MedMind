@@ -7,7 +7,7 @@ name = "physiology-rag"
 version = "0.1.0"
 description = "PDF-to-RAG system for physiology education"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
     {name = "Medical Education Team"},
@@ -20,63 +20,90 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Education",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
     "Topic :: Text Processing :: Markup :: Markdown",
 ]
 
 dependencies = [
-    "google-generativeai>=0.3.0",
-    "chromadb>=0.4.0", 
-    "pydantic-ai>=0.0.14",
-    "pydantic>=2.0.0",
-    "pydantic-settings>=2.0.0",
-    "python-dotenv>=1.0.0",
-    "streamlit>=1.28.0",
-    "pillow>=10.0.0",
-    "numpy>=1.24.0",
-    "pandas>=2.0.0",
-    "marker-pdf",
-    "click>=8.0.0",
+    # AI/ML Libraries
+    "google-generativeai>=0.8.5",
+    "chromadb>=1.0.12", 
+    "pydantic-ai>=0.2.15",
+    
+    # Configuration Management
+    "pydantic>=2.11.4",
+    "pydantic-settings>=2.9.1",
+    "python-dotenv>=1.1.0",
+    
+    # Web Interface
+    "streamlit>=1.45.0",
+    
+    # Image Processing
+    "pillow>=10.4.0",
+    
+    # Data Processing
+    "numpy>=2.2.5",
+    "pandas>=2.2.3",
+    
+    # PDF Processing
+    "marker-pdf>=1.5.5",
+    
+    # CLI Tools
+    "click>=8.1.8",
+    "typer>=0.16.0",
+    
+    # Additional core dependencies
+    "requests>=2.32.3",
+    "aiofiles>=24.1.0",
+    "pathspec>=0.12.1",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "pytest-asyncio>=0.21.0",
-    "factory-boy>=3.2.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "flake8>=6.0.0",
-    "mypy>=1.5.0",
-    "pre-commit>=3.0.0",
+    # Testing
+    "pytest>=8.4.0",
+    "pytest-cov>=6.1.1",
+    "pytest-asyncio>=1.0.0",
+    "factory-boy>=3.3.3",
+    
+    # Code Quality
+    "black>=25.1.0",
+    "isort>=6.0.1",
+    "flake8>=7.2.0",
+    "mypy>=1.16.0",
+    "pre-commit>=4.2.0",
+    
+    # Development Tools
+    "jupyter>=1.0.0",
+    "ipykernel>=6.29.5",
+    "jupyterlab>=4.4.2",
 ]
+
 docs = [
     "mkdocs>=1.5.0",
     "mkdocs-material>=9.0.0",
     "mkdocs-mermaid2-plugin>=1.0.0",
 ]
-jupyter = [
-    "jupyter>=1.0.0",
-    "ipykernel>=6.0.0",
+
+all = [
+    # Include all optional dependencies
+    "physiology-rag[dev,docs]",
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/physiology-rag"
-Repository = "https://github.com/yourusername/physiology-rag"
-Documentation = "https://yourusername.github.io/physiology-rag"
-"Bug Tracker" = "https://github.com/yourusername/physiology-rag/issues"
+Homepage = "https://github.com/keentechcodes/MedMind"
+Repository = "https://github.com/keentechcodes/MedMind"
+Documentation = "https://github.com/keentechcodes/MedMind/blob/main/README.md"
+"Bug Tracker" = "https://github.com/keentechcodes/MedMind/issues"
 
 [project.scripts]
 physiology-rag = "physiology_rag.cli:main"
 rag-process = "physiology_rag.core.document_processor:main"
 rag-embed = "physiology_rag.core.embeddings_service:main"
 rag-test = "physiology_rag.core.rag_system:main"
+medmind-cli = "physiology_rag.agents.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -85,9 +112,35 @@ include = ["physiology_rag*"]
 [tool.setuptools.package-data]
 physiology_rag = ["*.json", "*.yaml", "*.yml"]
 
+# UV Configuration
+[tool.uv]
+dev-dependencies = [
+    # Testing
+    "pytest>=8.4.0",
+    "pytest-cov>=6.1.1", 
+    "pytest-asyncio>=1.0.0",
+    "factory-boy>=3.3.3",
+    
+    # Code Quality
+    "black>=25.1.0",
+    "isort>=6.0.1",
+    "flake8>=7.2.0",
+    "mypy>=1.16.0",
+    "pre-commit>=4.2.0",
+    
+    # Development Tools
+    "jupyter>=1.0.0",
+    "ipykernel>=6.29.5",
+    "jupyterlab>=4.4.2",
+]
+
+[tool.uv.sources]
+# Use PyPI for all packages by default
+
+# Code Quality Tools Configuration
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py312']
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -97,6 +150,7 @@ exclude = '''
   | \.mypy_cache
   | \.tox
   | \.venv
+  | \.uv-cache
   | _build
   | buck-out
   | build
@@ -108,17 +162,50 @@ exclude = '''
 profile = "black"
 multi_line_output = 3
 line_length = 88
+known_first_party = ["physiology_rag"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 ignore_missing_imports = true
+exclude = [
+    ".venv/",
+    ".uv-cache/",
+    "build/",
+    "dist/",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = ""
+addopts = "--cov=physiology_rag --cov-report=term-missing --cov-report=html"
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["physiology_rag"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
+    "*/.uv-cache/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]

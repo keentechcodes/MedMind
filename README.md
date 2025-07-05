@@ -4,7 +4,8 @@
 
 A comprehensive AI-powered medical education platform designed specifically for physiology learning. MedMind features a **multi-agent architecture with PydanticAI** that provides personalized, adaptive learning experiences including intelligent tutoring, progress tracking, and contextual question answering for medical students.
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
@@ -52,15 +53,35 @@ graph TD
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.12 or higher
+- [uv](https://github.com/astral-sh/uv) package manager
 - Google Gemini API key ([Get one here](https://ai.google.dev/))
 
-### Quick Install
+### Quick Install with uv (Recommended)
 
 ```bash
 # Clone the repository
 git clone https://github.com/keentechcodes/MedMind.git
 cd MedMind
+
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create virtual environment and install dependencies
+uv sync
+
+# Activate the environment
+source .venv/bin/activate  # On Unix/MacOS
+# or
+.venv\Scripts\activate     # On Windows
+```
+
+### Alternative: Traditional pip Install
+
+```bash
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Unix/MacOS
 
 # Install the package
 pip install -e .
@@ -69,14 +90,19 @@ pip install -e .
 pip install -e .[dev]
 ```
 
-### Development Setup
+### Development Setup with uv
 
 ```bash
-# Install with all optional dependencies
-pip install -e .[dev,docs,jupyter]
+# Install with development dependencies
+uv sync --dev
 
-# Set up pre-commit hooks
-pre-commit install
+# Install pre-commit hooks
+uv run pre-commit install
+
+# Run development tools
+uv run black physiology_rag/
+uv run pytest
+uv run mypy physiology_rag/
 ```
 
 ## ⚙️ Configuration
@@ -120,23 +146,25 @@ LOG_LEVEL=INFO
 cp your-physiology-document.pdf data/raw/
 
 # Convert PDF to markdown (requires marker-pdf setup)
-python -m physiology_rag.pdf_processing.converter data/raw/your-document.pdf
+uv run python -m physiology_rag.pdf_processing.converter data/raw/your-document.pdf
 
 # Process documents into chunks
-rag-process
+uv run rag-process
 
 # Create vector embeddings
-rag-embed
+uv run rag-embed
 ```
 
 ### 2. Try the Agent System
 
 ```bash
 # Interactive CLI with Coordinator Agent
-python -m physiology_rag.agents.cli
+uv run python -m physiology_rag.agents.cli
+# or
+uv run medmind-cli
 
 # Or launch the Streamlit web interface
-streamlit run physiology_rag/ui/streamlit_app.py
+uv run streamlit run physiology_rag/ui/streamlit_app.py
 ```
 
 Try asking questions like:
@@ -148,20 +176,20 @@ Try asking questions like:
 
 ```bash
 # Test the agent system
-python -c "
+uv run python -c "
 import asyncio
 from physiology_rag.agents.cli import test_coordinator
 asyncio.run(test_coordinator())
 "
 
 # Test the RAG system
-rag-test
+uv run rag-test
 
 # Process documents only
-rag-process
+uv run rag-process
 
 # Create embeddings only  
-rag-embed
+uv run rag-embed
 ```
 
 ## 📚 Usage Examples
@@ -230,16 +258,19 @@ stats = embeddings.get_collection_stats()
 
 ```bash
 # Run all tests
-pytest
+uv run pytest
 
 # Test the agent system specifically
-pytest tests/test_agents/test_coordinator.py -v
+uv run pytest tests/test_agents/test_coordinator.py -v
 
 # Run tests with coverage
-pytest --cov=physiology_rag
+uv run pytest --cov=physiology_rag
 
 # Test specific components
-pytest tests/test_rag_system.py
+uv run pytest tests/test_rag_system.py
+
+# Run tests with detailed output
+uv run pytest -v --cov-report=html
 ```
 
 ## 📖 Documentation
@@ -286,16 +317,19 @@ The project uses:
 
 ```bash
 # Format code
-black physiology_rag/
+uv run black physiology_rag/
 
 # Sort imports
-isort physiology_rag/
+uv run isort physiology_rag/
 
 # Type checking
-mypy physiology_rag/
+uv run mypy physiology_rag/
 
 # Run all quality checks
-pre-commit run --all-files
+uv run pre-commit run --all-files
+
+# Lint code
+uv run flake8 physiology_rag/
 ```
 
 ## 🚦 System Status
