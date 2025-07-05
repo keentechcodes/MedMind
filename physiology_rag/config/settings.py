@@ -9,9 +9,9 @@ from typing import Optional
 
 try:
     from pydantic_settings import BaseSettings
-    from pydantic import validator
+    from pydantic import field_validator
 except ImportError:
-    from pydantic import BaseSettings, validator
+    from pydantic import BaseSettings, field_validator
 
 from dotenv import load_dotenv
 
@@ -61,20 +61,21 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     
-    @validator('gemini_api_key')
+    @field_validator('gemini_api_key')
+    @classmethod
     def validate_api_key(cls, v):
         if not v or v == "your-api-key-here":
             raise ValueError("GEMINI_API_KEY must be set to a valid API key")
         return v
     
-    @validator('data_dir', 'raw_data_dir', 'processed_data_dir', 'uploads_dir', 'vector_db_path')
+    @field_validator('data_dir', 'raw_data_dir', 'processed_data_dir', 'uploads_dir', 'vector_db_path')
+    @classmethod
     def create_directories(cls, v):
         """Ensure directories exist."""
         Path(v).mkdir(parents=True, exist_ok=True)
         return v
     
-    class Config:
-        case_sensitive = False
+    model_config = {"case_sensitive": False}
 
 
 # Global settings instance

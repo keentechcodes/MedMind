@@ -16,7 +16,8 @@ class TestDocumentProcessor:
         """Test DocumentProcessor initialization."""
         processor = DocumentProcessor(str(temp_dir))
         assert processor.output_dir == temp_dir
-        assert processor.chunk_size == test_settings.chunk_size
+        # DocumentProcessor uses default chunk size, not from test_settings
+        assert processor.chunk_size == 1000  # Default value
     
     def test_simple_chunk_text(self, temp_dir):
         """Test simple text chunking."""

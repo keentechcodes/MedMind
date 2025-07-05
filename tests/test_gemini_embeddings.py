@@ -14,7 +14,8 @@ def test_gemini_embeddings():
     if not api_key:
         print("❌ Error: GEMINI_API_KEY environment variable not set")
         print("Please set it with: export GEMINI_API_KEY=your-api-key")
-        return False
+        import pytest
+        pytest.skip("GEMINI_API_KEY not set")
     
     genai.configure(api_key=api_key)
     
@@ -45,11 +46,14 @@ def test_gemini_embeddings():
         print(f"✅ Successfully generated query embedding with {len(query_embedding)} dimensions")
         
         print("\n✅ All Gemini embedding tests passed!")
-        return True
+        # Test functions should not return values, use assertions instead
+        assert True  # Test passed
         
     except Exception as e:
         print(f"❌ Gemini embedding test failed: {str(e)}")
-        return False
+        # Use pytest.fail() instead of return False
+        import pytest
+        pytest.fail(f"Gemini embedding test failed: {str(e)}")
 
 if __name__ == "__main__":
     test_gemini_embeddings()

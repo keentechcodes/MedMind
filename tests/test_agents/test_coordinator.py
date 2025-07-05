@@ -51,6 +51,14 @@ class MockRAGSystem:
             'answer': f"Mock answer for: {question}",
             'sources': ['Test Document']
         }
+    
+    def answer_question(self, question: str, n_results: int = 3):
+        """Mock answer_question method that coordinator expects."""
+        return {
+            'answer': f"Mock answer for: {question}",
+            'sources': [{'metadata': {'document_name': 'Test Document'}}],
+            'context': "Mock context"
+        }
 
 
 @pytest.fixture
@@ -154,7 +162,7 @@ class TestCoordinatorAgent:
         )
         
         assert isinstance(response, str)
-        assert "mock response" in response.lower()
+        assert "mock answer" in response.lower()
     
     def test_medical_context_updates(self, test_medical_context):
         """Test that medical context updates correctly."""

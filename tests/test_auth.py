@@ -4,8 +4,10 @@ Test script to verify Google Cloud authentication is working
 """
 
 import os
-from google.cloud import aiplatform
-from vertexai.language_models import TextEmbeddingModel
+import pytest
+
+# Skip this test since we're using Gemini API directly, not Google Cloud/Vertex AI
+pytestmark = pytest.mark.skip(reason="Using Gemini API directly, not Google Cloud/Vertex AI")
 
 def test_authentication():
     print("🔐 Testing Google Cloud authentication...")
