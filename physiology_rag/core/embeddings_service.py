@@ -12,6 +12,7 @@ import google.generativeai as genai
 
 from physiology_rag.config.settings import get_settings
 from physiology_rag.utils.logging import get_logger
+from physiology_rag.core.cache_manager import get_cache_manager
 
 logger = get_logger("embeddings_service")
 
@@ -40,6 +41,9 @@ class EmbeddingsService:
         # Store settings
         self.embedding_model = settings.gemini_embedding_model
         self.batch_size = settings.batch_size
+        
+        # Initialize cache manager
+        self.cache_manager = get_cache_manager()
         
         # Initialize ChromaDB
         self.vector_db_path = Path(settings.vector_db_path)
@@ -82,12 +86,26 @@ class EmbeddingsService:
             
             for j, text in enumerate(batch):
                 try:
-                    result = genai.embed_content(
-                        model=self.embedding_model,
-                        content=text[:1000],  # Limit text length for API
-                        task_type="retrieval_document"
-                    )
-                    batch_embeddings.append(result['embedding'])
+                    # Check cache first
+                    text_content = text[:1000]  # Limit text length for API
+                    cached_embedding = self.cache_manager.get_embedding(text_content)
+                    
+                    if cached_embedding is not None:
+                        batch_embeddings.append(cached_embedding)
+                        logger.debug(f"Using cached embedding for text {i+j}")
+                    else:
+                        # Generate new embedding
+                        result = genai.embed_content(
+                            model=self.embedding_model,
+                            content=text_content,
+                            task_type="retrieval_document"
+                        )
+                        embedding = result['embedding']
+                        batch_embeddings.append(embedding)
+                        
+                        # Cache the embedding
+                        self.cache_manager.set_embedding(text_content, embedding)
+                        
                 except Exception as e:
                     logger.error(f"Error generating embedding for text {i+j}: {e}")
                     # Use zero vector as fallback
@@ -186,13 +204,23 @@ class EmbeddingsService:
         logger.info(f"Searching for: '{query}' (top {n_results} results)")
         
         try:
-            # Generate embedding for query
-            result = genai.embed_content(
-                model=self.embedding_model,
-                content=query,
-                task_type="retrieval_query"
-            )
-            query_embedding = result['embedding']
+            # Check cache for query embedding
+            cached_embedding = self.cache_manager.get_embedding(f"query:{query}")
+            
+            if cached_embedding is not None:
+                query_embedding = cached_embedding
+                logger.debug("Using cached query embedding")
+            else:
+                # Generate embedding for query
+                result = genai.embed_content(
+                    model=self.embedding_model,
+                    content=query,
+                    task_type="retrieval_query"
+                )
+                query_embedding = result['embedding']
+                
+                # Cache the query embedding
+                self.cache_manager.set_embedding(f"query:{query}", query_embedding)
             
             # Search in vector database
             results = self.collection.query(
