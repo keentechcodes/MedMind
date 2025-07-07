@@ -101,7 +101,43 @@ def display_sources_cli(sources):
         print(f"Section: {section_title}")
         print(f"Chunk: {metadata.get('chunk_index', '?')}/{metadata.get('total_chunks', '?')}")
         print(f"Chunk Type: {metadata.get('chunk_type', 'content')}")
-        print(f"Content Preview: {source.get('document', '')[:200]}...")
+        print(f"\nFull Content:")
+        print("=" * 40)
+        print(source.get('document', 'No content available'))
+        
+        # Show images for this source like Streamlit does
+        print(f"\nImages from {doc_name}:")
+        print("=" * 30)
+        try:
+            # Try to get images (simplified version for CLI)
+            from pathlib import Path
+            import json
+            
+            # Load processed documents to get image info
+            processed_file = Path("data/processed/processed_documents.json")
+            if processed_file.exists():
+                with open(processed_file, "r") as f:
+                    docs = json.load(f)
+                
+                # Find images for this document
+                doc_images = []
+                for doc in docs:
+                    if doc.get('document_name') == doc_name:
+                        doc_images = doc.get('images', [])[:3]  # First 3 like Streamlit
+                        break
+                
+                if doc_images:
+                    for img in doc_images:
+                        print(f"  - {img.get('type', 'Unknown')} {img.get('number', '?')}: {img.get('filename', 'No filename')}")
+                        print(f"    Path: {img.get('path', 'No path')}")
+                else:
+                    print("  No images found for this document")
+            else:
+                print("  Cannot load image information")
+                
+        except Exception as e:
+            print(f"  Error loading images: {e}")
+        
         print("-" * 60)
 
 
