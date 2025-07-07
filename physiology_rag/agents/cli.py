@@ -149,8 +149,8 @@ def show_system_info():
         print(f"❌ Error getting system info: {e}")
 
 
-async def main():
-    """Main CLI entry point."""
+async def main_async():
+    """Async main CLI entry point."""
     import sys
     
     if len(sys.argv) < 2:
@@ -168,11 +168,16 @@ async def main():
     else:
         print("🔧 MedMind Coordinator Agent CLI")
         print("\nAvailable commands:")
-        print("  python -m physiology_rag.agents.cli           # Interactive mode")
-        print("  python -m physiology_rag.agents.cli test      # Run tests")
-        print("  python -m physiology_rag.agents.cli info      # System info")
-        print("  python -m physiology_rag.agents.cli interactive  # Interactive mode")
+        print("  medmind-cli                    # Interactive mode")
+        print("  medmind-cli test              # Run tests")
+        print("  medmind-cli info              # System info")
+        print("  medmind-cli interactive       # Interactive mode")
+
+
+def main():
+    """Sync main entry point for package scripts."""
+    asyncio.run(main_async())
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
