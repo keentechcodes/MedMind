@@ -10,6 +10,7 @@ from pathlib import Path
 
 from physiology_rag.agents.coordinator import create_coordinator_agent
 from physiology_rag.core.rag_system import RAGSystem
+from physiology_rag.core.paragraph_extractor import ParagraphExtractor
 from physiology_rag.config.settings import get_settings
 from physiology_rag.utils.logging import get_logger
 
@@ -180,6 +181,64 @@ async def test_rag_with_sources():
         logger.error(f"Testing error: {e}")
 
 
+async def test_paragraph_extraction():
+    """Test paragraph extraction on RAG sources."""
+    print("🧪 Testing Paragraph Extraction")
+    print("=" * 40)
+    
+    try:
+        # Initialize system
+        settings = get_settings()
+        
+        if not settings.gemini_api_key:
+            print("❌ Error: GEMINI_API_KEY not found.")
+            return
+        
+        rag_system = RAGSystem(settings.gemini_api_key)
+        paragraph_extractor = ParagraphExtractor()
+        print("✅ Systems initialized")
+        
+        # Test with blood-brain barrier question
+        test_question = "How does the blood-brain barrier protect neurons while allowing glucose transport?"
+        print(f"\n🧪 Testing question: {test_question}")
+        
+        # Get RAG sources only (no answer generation)
+        sources = rag_system.retrieve_relevant_chunks(test_question, 3)
+        source_list = sources.get('results', [])
+        
+        if not source_list:
+            print("❌ No sources found!")
+            return
+            
+        print(f"\n📚 Found {len(source_list)} sources")
+        
+        # Extract paragraphs from sources
+        paragraphs = paragraph_extractor.extract_paragraphs_from_sources(source_list)
+        
+        print(f"\n📄 Extracted {len(paragraphs)} paragraphs")
+        print("=" * 50)
+        
+        # Display paragraphs
+        for i, paragraph in enumerate(paragraphs):
+            print(f"\n📄 Paragraph {i+1}: {paragraph.document_name}")
+            print(f"Section: {paragraph.title}")
+            print(f"Source Chunk: {paragraph.source_chunk_index}")
+            print(f"Paragraph Index: {paragraph.paragraph_index}")
+            print(f"Content Length: {len(paragraph.content)} chars")
+            print(f"\nContent Preview:")
+            print("-" * 30)
+            # Show first 200 chars
+            preview = paragraph.content[:200] + "..." if len(paragraph.content) > 200 else paragraph.content
+            print(preview)
+            print("-" * 50)
+        
+        print("\n🎉 Paragraph extraction testing completed!")
+        
+    except Exception as e:
+        print(f"❌ Test failed: {e}")
+        logger.error(f"Paragraph extraction error: {e}")
+
+
 async def interactive_session():
     """Run an interactive session with the Coordinator Agent."""
     print("🧠 MedMind Coordinator Agent - Interactive Mode")
@@ -328,6 +387,8 @@ async def main_async():
         await test_coordinator()
     elif command == "test-sources":
         await test_rag_with_sources()
+    elif command == "test-paragraphs":
+        await test_paragraph_extraction()
     elif command == "info":
         show_system_info()
     elif command == "interactive":
@@ -335,11 +396,12 @@ async def main_async():
     else:
         print("🔧 MedMind Coordinator Agent CLI")
         print("\nAvailable commands:")
-        print("  medmind-cli                    # Interactive mode")
-        print("  medmind-cli test              # Run tests")
-        print("  medmind-cli test-sources      # Test RAG with enhanced sources")
-        print("  medmind-cli info              # System info")
-        print("  medmind-cli interactive       # Interactive mode")
+        print("  medmind-cli                      # Interactive mode")
+        print("  medmind-cli test                # Run tests")
+        print("  medmind-cli test-sources        # Test RAG with enhanced sources")
+        print("  medmind-cli test-paragraphs     # Test paragraph extraction")
+        print("  medmind-cli info                # System info")
+        print("  medmind-cli interactive         # Interactive mode")
 
 
 def main():
