@@ -10,6 +10,7 @@ from typing import Any, Dict, List
 
 from physiology_rag.config.settings import get_settings
 from physiology_rag.utils.logging import get_logger
+from physiology_rag.core.advanced_chunking import AdvancedDocumentProcessor
 
 logger = get_logger("document_processor")
 
@@ -22,18 +23,27 @@ class DocumentProcessor:
     that preserve document structure and improve retrieval quality.
     """
     
-    def __init__(self, output_dir: str = None):
+    def __init__(self, output_dir: str = None, use_advanced_chunking: bool = True):
         """
         Initialize document processor.
         
         Args:
             output_dir: Directory containing processed documents (defaults to settings)
+            use_advanced_chunking: Whether to use advanced semantic chunking
         """
         settings = get_settings()
         self.output_dir = Path(output_dir or settings.processed_data_dir)
         self.chunk_size = settings.chunk_size
+        self.use_advanced_chunking = use_advanced_chunking
+        
+        if use_advanced_chunking:
+            self.advanced_processor = AdvancedDocumentProcessor(
+                chunk_size=self.chunk_size,
+                overlap_ratio=0.15  # 15% overlap
+            )
         
         logger.info(f"Initialized DocumentProcessor with output_dir: {self.output_dir}")
+        logger.info(f"Advanced chunking: {'enabled' if use_advanced_chunking else 'disabled'}")
         
     def chunk_markdown_with_metadata(
         self, 
@@ -233,8 +243,21 @@ class DocumentProcessor:
             with open(metadata_file, 'r', encoding='utf-8') as f:
                 metadata = json.loads(f.read())
         
-        # Process content using metadata
-        chunks = self.chunk_markdown_with_metadata(content, metadata)
+        # Process content using metadata - choose chunking strategy
+        if self.use_advanced_chunking:
+            # Use advanced semantic chunking with medical concept detection
+            section_metadata = {
+                'title': metadata.get('title', doc_name),
+                'page_id': 1,
+                'section_hierarchy': [doc_name]
+            }
+            chunks = self.advanced_processor.process_document_with_advanced_chunking(
+                content, section_metadata
+            )
+        else:
+            # Use traditional metadata-based chunking
+            chunks = self.chunk_markdown_with_metadata(content, metadata)
+        
         images = self.extract_images_metadata(doc_dir)
         
         result = {
