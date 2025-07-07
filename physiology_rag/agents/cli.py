@@ -5,6 +5,7 @@ Provides a simple command-line interface to interact with MedMind agents.
 
 import asyncio
 import os
+import re
 from pathlib import Path
 
 from physiology_rag.agents.coordinator import create_coordinator_agent
@@ -13,6 +14,134 @@ from physiology_rag.config.settings import get_settings
 from physiology_rag.utils.logging import get_logger
 
 logger = get_logger("agent_cli")
+
+
+def extract_section_title_from_text(text: str) -> str:
+    """Extract a meaningful section title from chunk text."""
+    if not text:
+        return "Content"
+    
+    lines = text.strip().split('\n')
+    
+    # Try different patterns in order of preference
+    for line in lines[:10]:  # Check first 10 lines
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Pattern 1: Markdown headers (##, ###, ####)
+        if re.match(r'^#{2,4}\s+(.+)', line):
+            title = re.sub(r'^#{2,4}\s+', '', line).strip()
+            if len(title) > 3:
+                return title
+        
+        # Pattern 2: Bold headers (**text**)
+        bold_match = re.match(r'^\*\*(.+?)\*\*', line)
+        if bold_match:
+            title = bold_match.group(1).strip()
+            if len(title) > 3 and not title.isdigit():
+                return title
+        
+        # Pattern 3: Numbered sections (1., 2., etc.)
+        numbered_match = re.match(r'^\d+\.\s+(.+)', line)
+        if numbered_match:
+            title = numbered_match.group(1).strip()
+            if len(title) > 3:
+                return title
+        
+        # Pattern 4: Bullet points with caps (● Text, - Text)
+        bullet_match = re.match(r'^[●•-]\s*(.+)', line)
+        if bullet_match:
+            title = bullet_match.group(1).strip()
+            if len(title) > 3 and title[0].isupper():
+                return title
+        
+        # Pattern 5: All caps headers
+        if line.isupper() and len(line) > 3 and len(line) < 80:
+            return line
+        
+        # Pattern 6: Title case headers (first significant line)
+        if (len(line) > 5 and len(line) < 100 and 
+            line[0].isupper() and 
+            not line.endswith('.') and 
+            not line.startswith('Source') and
+            not line.startswith('Figure')):
+            return line
+    
+    # Fallback: use first meaningful line
+    for line in lines[:5]:
+        line = line.strip()
+        if len(line) > 10 and not line.startswith('|') and not line.startswith('![]'):
+            return line[:50] + "..." if len(line) > 50 else line
+    
+    return "Content"
+
+
+def display_sources_cli(sources):
+    """Display source information in CLI format like Streamlit."""
+    if not sources:
+        print("No sources found.")
+        return
+        
+    print("\n📚 Sources:")
+    print("=" * 60)
+    
+    for i, source in enumerate(sources):
+        score = source.get('similarity_score', 0.0)
+        doc_name = source.get('metadata', {}).get('document_name', 'Unknown Document')
+        metadata = source.get('metadata', {})
+        
+        # Extract meaningful section title
+        section_title = metadata.get('title', 'Content')
+        if section_title == 'Content' or not section_title:
+            chunk_text = source.get('document', '')
+            section_title = extract_section_title_from_text(chunk_text)
+        
+        print(f"\nSource {i+1}: {doc_name} (Score: {score:.3f})")
+        print(f"Section: {section_title}")
+        print(f"Chunk: {metadata.get('chunk_index', '?')}/{metadata.get('total_chunks', '?')}")
+        print(f"Chunk Type: {metadata.get('chunk_type', 'content')}")
+        print(f"Content Preview: {source.get('document', '')[:200]}...")
+        print("-" * 60)
+
+
+async def test_rag_with_sources():
+    """Test RAG system directly to see source attribution like Streamlit."""
+    print("🧪 Testing RAG System with Enhanced Source Display")
+    print("=" * 55)
+    
+    try:
+        # Initialize system
+        settings = get_settings()
+        
+        if not settings.gemini_api_key:
+            print("❌ Error: GEMINI_API_KEY not found.")
+            return
+        
+        rag_system = RAGSystem(settings.gemini_api_key)
+        print("✅ RAG system initialized")
+        
+        # Test with blood-brain barrier question
+        test_question = "How does the blood-brain barrier protect neurons while allowing glucose transport?"
+        print(f"\n🧪 Testing question: {test_question}")
+        
+        # Get RAG response like Streamlit does
+        result = rag_system.answer_question(test_question, 3)
+        
+        # Display answer
+        print("\n🧠 Answer:")
+        print("=" * 40)
+        print(result.get('answer', 'No answer generated'))
+        
+        # Display sources with enhanced titles
+        sources = result.get('sources', [])
+        display_sources_cli(sources)
+        
+        print("\n🎉 Testing completed!")
+        
+    except Exception as e:
+        print(f"❌ Test failed: {e}")
+        logger.error(f"Testing error: {e}")
 
 
 async def interactive_session():
@@ -161,6 +290,8 @@ async def main_async():
     
     if command == "test":
         await test_coordinator()
+    elif command == "test-sources":
+        await test_rag_with_sources()
     elif command == "info":
         show_system_info()
     elif command == "interactive":
@@ -170,6 +301,7 @@ async def main_async():
         print("\nAvailable commands:")
         print("  medmind-cli                    # Interactive mode")
         print("  medmind-cli test              # Run tests")
+        print("  medmind-cli test-sources      # Test RAG with enhanced sources")
         print("  medmind-cli info              # System info")
         print("  medmind-cli interactive       # Interactive mode")
 

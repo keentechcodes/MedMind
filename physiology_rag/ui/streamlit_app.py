@@ -5,6 +5,7 @@ Multi-Agent Streamlit Interface with PydanticAI Integration
 """
 
 import json
+import re
 import asyncio
 import streamlit as st
 from pathlib import Path
@@ -166,6 +167,67 @@ def get_images_for_document(doc_name: str, max_images: int = 5) -> list:
         logger.error(f"Error getting images for document: {e}")
         return []
 
+def extract_section_title_from_text(text: str) -> str:
+    """Extract a meaningful section title from chunk text."""
+    if not text:
+        return "Content"
+    
+    lines = text.strip().split('\n')
+    
+    # Try different patterns in order of preference
+    for line in lines[:10]:  # Check first 10 lines
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Pattern 1: Markdown headers (##, ###, ####)
+        if re.match(r'^#{2,4}\s+(.+)', line):
+            title = re.sub(r'^#{2,4}\s+', '', line).strip()
+            if len(title) > 3:
+                return title
+        
+        # Pattern 2: Bold headers (**text**)
+        bold_match = re.match(r'^\*\*(.+?)\*\*', line)
+        if bold_match:
+            title = bold_match.group(1).strip()
+            if len(title) > 3 and not title.isdigit():
+                return title
+        
+        # Pattern 3: Numbered sections (1., 2., etc.)
+        numbered_match = re.match(r'^\d+\.\s+(.+)', line)
+        if numbered_match:
+            title = numbered_match.group(1).strip()
+            if len(title) > 3:
+                return title
+        
+        # Pattern 4: Bullet points with caps (● Text, - Text)
+        bullet_match = re.match(r'^[●•-]\s*(.+)', line)
+        if bullet_match:
+            title = bullet_match.group(1).strip()
+            if len(title) > 3 and title[0].isupper():
+                return title
+        
+        # Pattern 5: All caps headers
+        if line.isupper() and len(line) > 3 and len(line) < 80:
+            return line
+        
+        # Pattern 6: Title case headers (first significant line)
+        if (len(line) > 5 and len(line) < 100 and 
+            line[0].isupper() and 
+            not line.endswith('.') and 
+            not line.startswith('Source') and
+            not line.startswith('Figure')):
+            return line
+    
+    # Fallback: use first meaningful line
+    for line in lines[:5]:
+        line = line.strip()
+        if len(line) > 10 and not line.startswith('|') and not line.startswith('![]'):
+            return line[:50] + "..." if len(line) > 50 else line
+    
+    return "Content"
+
+
 def display_sources(sources):
     """Display source information in a nice format with associated images."""
     if not sources:
@@ -181,7 +243,13 @@ def display_sources(sources):
             metadata = source.get('metadata', {})
             chunk_info = f"{metadata.get('chunk_index', '?')}/{metadata.get('total_chunks', '?')}"
             
-            st.write("**Section:**", metadata.get('title', 'Content'))
+            # Extract meaningful section title
+            section_title = metadata.get('title', 'Content')
+            if section_title == 'Content' or not section_title:
+                chunk_text = source.get('document', '')
+                section_title = extract_section_title_from_text(chunk_text)
+            
+            st.write("**Section:**", section_title)
             st.write("**Chunk:**", f"{metadata.get('chunk_index', '?')}/{metadata.get('total_chunks', '?')}")
             st.write("**Chunk Type:**", metadata.get('chunk_type', 'content'))
             
