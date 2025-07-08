@@ -11,6 +11,7 @@ from pathlib import Path
 from physiology_rag.agents.coordinator import create_coordinator_agent
 from physiology_rag.core.rag_system import RAGSystem
 from physiology_rag.core.paragraph_extractor import ParagraphExtractor
+from physiology_rag.core.answer_attribution import AnswerAttributionMapper
 from physiology_rag.config.settings import get_settings
 from physiology_rag.utils.logging import get_logger
 
@@ -239,6 +240,91 @@ async def test_paragraph_extraction():
         logger.error(f"Paragraph extraction error: {e}")
 
 
+async def test_answer_attribution():
+    """Test answer attribution mapping with paragraph extraction."""
+    print("🧪 Testing Answer Attribution with Precise Citations")
+    print("=" * 55)
+    
+    try:
+        # Initialize systems
+        settings = get_settings()
+        
+        if not settings.gemini_api_key:
+            print("❌ Error: GEMINI_API_KEY not found.")
+            return
+        
+        rag_system = RAGSystem(settings.gemini_api_key)
+        paragraph_extractor = ParagraphExtractor()
+        attribution_mapper = AnswerAttributionMapper(settings.gemini_api_key)
+        print("✅ All systems initialized")
+        
+        # Test with blood-brain barrier question
+        test_question = "How does the blood-brain barrier protect neurons while allowing glucose transport?"
+        print(f"\n🧪 Testing question: {test_question}")
+        
+        # Step 1: Get RAG answer and sources
+        print("\n📖 Step 1: Generating answer with RAG...")
+        rag_result = rag_system.answer_question(test_question, 3)
+        answer = rag_result.get('answer', '')
+        sources = rag_result.get('sources', [])
+        
+        if not answer or not sources:
+            print("❌ No answer or sources generated!")
+            return
+        
+        print(f"✅ Generated answer ({len(answer)} chars)")
+        print(f"✅ Retrieved {len(sources)} sources")
+        
+        # Step 2: Extract paragraphs
+        print("\n📄 Step 2: Extracting paragraphs...")
+        paragraphs = paragraph_extractor.extract_paragraphs_from_sources(sources)
+        print(f"✅ Extracted {len(paragraphs)} paragraphs")
+        
+        # Step 3: Create attributed answer
+        print("\n🎯 Step 3: Creating answer attribution...")
+        attributed_answer = await attribution_mapper.create_attributed_answer(
+            test_question, answer, paragraphs
+        )
+        
+        # Step 4: Display results
+        print("\n" + "=" * 60)
+        print("📋 ATTRIBUTED ANSWER RESULTS")
+        print("=" * 60)
+        
+        print(f"\n🧠 Original Answer:")
+        print("-" * 30)
+        print(answer[:300] + "..." if len(answer) > 300 else answer)
+        
+        print(f"\n🎯 Attribution Analysis:")
+        print(f"  • Total segments: {len(attributed_answer.attributions)}")
+        print(f"  • Total paragraphs: {len(attributed_answer.paragraphs)}")
+        print(f"  • Overall confidence: {attributed_answer.overall_confidence:.2f}")
+        
+        print(f"\n📊 Detailed Attributions:")
+        print("-" * 50)
+        
+        for i, attribution in enumerate(attributed_answer.attributions):
+            print(f"\n🔹 Segment {i+1} ({attribution.attribution_type}, confidence: {attribution.confidence:.2f}):")
+            print(f"   Text: {attribution.answer_segment[:100]}...")
+            
+            if attribution.supporting_paragraphs:
+                print(f"   Supported by paragraphs: {attribution.supporting_paragraphs}")
+                for para_idx in attribution.supporting_paragraphs[:2]:  # Show first 2
+                    if para_idx < len(paragraphs):
+                        para = paragraphs[para_idx]
+                        print(f"     • {para.title} ({para.document_name})")
+            else:
+                print("   No supporting paragraphs identified")
+        
+        print("\n🎉 Answer attribution testing completed!")
+        
+    except Exception as e:
+        print(f"❌ Test failed: {e}")
+        logger.error(f"Answer attribution error: {e}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+
+
 async def interactive_session():
     """Run an interactive session with the Coordinator Agent."""
     print("🧠 MedMind Coordinator Agent - Interactive Mode")
@@ -389,6 +475,8 @@ async def main_async():
         await test_rag_with_sources()
     elif command == "test-paragraphs":
         await test_paragraph_extraction()
+    elif command == "test-attribution":
+        await test_answer_attribution()
     elif command == "info":
         show_system_info()
     elif command == "interactive":
@@ -400,6 +488,7 @@ async def main_async():
         print("  medmind-cli test                # Run tests")
         print("  medmind-cli test-sources        # Test RAG with enhanced sources")
         print("  medmind-cli test-paragraphs     # Test paragraph extraction")
+        print("  medmind-cli test-attribution    # Test answer attribution mapping")
         print("  medmind-cli info                # System info")
         print("  medmind-cli interactive         # Interactive mode")
 
