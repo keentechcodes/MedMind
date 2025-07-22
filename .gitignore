@@ -203,3 +203,7 @@ models/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+.opencode/
+.opencode.json
+

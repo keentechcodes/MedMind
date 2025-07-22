@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 from physiology_rag.core.rag_system import RAGSystem
+from physiology_rag.core.paragraph_extractor import ParagraphExtractor
+from physiology_rag.core.answer_attribution import AnswerAttributionMapper
 from physiology_rag.agents.coordinator import create_coordinator_agent
 from physiology_rag.dependencies.medical_context import create_medical_context
 from physiology_rag.models.learning_models import LearningResponse
@@ -34,10 +36,10 @@ st.set_page_config(
 
 
 @st.cache_resource
-def init_agent_system():
-    """Initialize Coordinator Agent system with caching."""
+def init_enhanced_citation_system():
+    """Initialize Enhanced Citation System with paragraph extraction and attribution."""
     try:
-        logger.info("Initializing MedMind Agent System for Streamlit")
+        logger.info("Initializing Enhanced Citation System for Streamlit")
         
         # Check settings first
         settings = get_settings()
@@ -46,21 +48,32 @@ def init_agent_system():
         # Initialize RAG system
         rag_system = RAGSystem()
         logger.info(f"RAG system type: {type(rag_system)}")
-        logger.info(f"RAG system methods: {[method for method in dir(rag_system) if not method.startswith('_')]}")
+        
+        # Initialize paragraph extractor
+        paragraph_extractor = ParagraphExtractor()
+        logger.info("Paragraph extractor initialized")
+        
+        # Initialize answer attribution mapper
+        attribution_mapper = AnswerAttributionMapper(settings.gemini_api_key)
+        logger.info("Answer attribution mapper initialized")
         
         # Verify the RAG system has the required methods
         if not hasattr(rag_system, 'answer_question'):
             raise AttributeError("RAGSystem does not have answer_question method")
         
-        logger.info("RAG system initialized successfully")
-        return rag_system
+        logger.info("Enhanced citation system initialized successfully")
+        return {
+            'rag_system': rag_system,
+            'paragraph_extractor': paragraph_extractor,
+            'attribution_mapper': attribution_mapper
+        }
         
     except Exception as e:
-        logger.error(f"Failed to initialize agent system: {e}")
+        logger.error(f"Failed to initialize enhanced citation system: {e}")
         logger.error(f"Exception type: {type(e)}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
-        st.error(f"Failed to initialize agent system: {e}")
+        st.error(f"Failed to initialize enhanced citation system: {e}")
         return None
 
 def get_session_user_id() -> str:
@@ -228,12 +241,111 @@ def extract_section_title_from_text(text: str) -> str:
     return "Content"
 
 
+def display_attributed_answer(attributed_answer_data):
+    """Display answer with enhanced paragraph-level citations."""
+    if not attributed_answer_data:
+        st.error("No attributed answer data available")
+        return
+    
+    answer = attributed_answer_data.get('answer', '')
+    attributions = attributed_answer_data.get('attributions', [])
+    overall_confidence = attributed_answer_data.get('overall_confidence', 0.0)
+    
+    # Display the answer with inline citations
+    st.subheader("🧠 Enhanced Answer with Precise Citations")
+    
+    # Show overall confidence
+    confidence_color = "green" if overall_confidence > 0.8 else "orange" if overall_confidence > 0.6 else "red"
+    st.markdown(f"**Overall Citation Confidence:** :{confidence_color}[{overall_confidence:.2f}]")
+    
+    # Display answer segments with their citations
+    for i, attribution in enumerate(attributions):
+        segment = attribution.get('segment', '')
+        supporting_paragraphs = attribution.get('supporting_paragraphs', [])
+        confidence = attribution.get('confidence', 0.0)
+        attr_type = attribution.get('type', 'unknown')
+        
+        # Create expandable section for each segment
+        with st.expander(f"📄 Answer Segment {i+1} - {attr_type.title()} (Confidence: {confidence:.2f})", expanded=True):
+            # Display the segment text
+            st.markdown(segment)
+            
+            # Display supporting paragraphs
+            if supporting_paragraphs:
+                st.markdown("**🎯 Supported by:**")
+                
+                for j, para_info in enumerate(supporting_paragraphs):
+                    para_title = para_info.get('title', 'Unknown Section')
+                    para_doc = para_info.get('document', 'Unknown Document')
+                    para_preview = para_info.get('content_preview', '')
+                    
+                    # Color-code by confidence
+                    conf_color = "green" if confidence > 0.8 else "orange" if confidence > 0.6 else "red"
+                    
+                    st.markdown(f"**{j+1}.** :{conf_color}[{para_title}] from *{para_doc}*")
+                    
+                    with st.expander(f"Preview: {para_title}", expanded=False):
+                        st.write(para_preview)
+            else:
+                st.warning("No supporting paragraphs identified for this segment")
+
+
+def display_enhanced_sources(attributed_answer):
+    """Display paragraph-level sources with enhanced organization."""
+    if not attributed_answer or not hasattr(attributed_answer, 'paragraphs'):
+        return
+    
+    st.subheader("📚 Paragraph-Level Sources")
+    
+    paragraphs = attributed_answer.paragraphs
+    
+    # Group paragraphs by document
+    doc_paragraphs = {}
+    for paragraph in paragraphs:
+        doc_name = paragraph.document_name
+        if doc_name not in doc_paragraphs:
+            doc_paragraphs[doc_name] = []
+        doc_paragraphs[doc_name].append(paragraph)
+    
+    # Display by document
+    for doc_name, paras in doc_paragraphs.items():
+        with st.expander(f"📄 {doc_name} ({len(paras)} paragraphs)", expanded=False):
+            
+            # Show document images
+            doc_images = get_images_for_document(doc_name, max_images=3)
+            if doc_images:
+                found_images = [img for img in doc_images if 'working_path' in img]
+                if found_images:
+                    st.write(f"**Document Images:** ({len(found_images)} available)")
+                    cols = st.columns(min(len(found_images), 3))
+                    for j, img in enumerate(found_images[:3]):
+                        try:
+                            cols[j].image(
+                                img['working_path'], 
+                                caption=f"{img['type']} {img['number']}",
+                                width=150
+                            )
+                        except Exception as e:
+                            cols[j].write(f"Image error: {e}")
+            
+            # Display paragraphs
+            for i, para in enumerate(paras):
+                st.markdown(f"**Paragraph {i+1}: {para.title}**")
+                st.markdown(f"*Source chunk: {para.source_chunk_index}, Paragraph: {para.paragraph_index}*")
+                
+                with st.expander(f"Content: {para.title}", expanded=False):
+                    st.write(para.content)
+                
+                st.markdown("---")
+
+
 def display_sources(sources):
-    """Display source information in a nice format with associated images."""
+    """Display source information in a nice format with associated images (legacy function)."""
     if not sources:
         return
         
-    st.subheader("📚 Sources")
+    st.subheader("📚 Legacy Sources Display")
+    st.info("This is the old source display. Enhanced paragraph-level citations are shown above.")
     
     for i, source in enumerate(sources):
         score = source.get('similarity_score', 0.0)
@@ -252,51 +364,6 @@ def display_sources(sources):
             st.write("**Section:**", section_title)
             st.write("**Chunk:**", f"{metadata.get('chunk_index', '?')}/{metadata.get('total_chunks', '?')}")
             st.write("**Chunk Type:**", metadata.get('chunk_type', 'content'))
-            
-            # Display sample images from the document
-            doc_images = get_images_for_document(doc_name, max_images=3)
-            if doc_images:
-                # Filter to only show images that were found
-                found_images = [img for img in doc_images if 'working_path' in img]
-                
-                if found_images:
-                    st.write(f"**Images from {doc_name}:** ({len(found_images)} found)")
-                    
-                    # Create columns for found images
-                    if len(found_images) == 1:
-                        img = found_images[0]
-                        try:
-                            st.image(
-                                img['working_path'], 
-                                caption=f"{img['type']} {img['number']} from {doc_name}",
-                                width=400
-                            )
-                        except Exception as e:
-                            st.write(f"Image: {img['filename']} (could not display: {e})")
-                    
-                    else:
-                        # Show multiple images in columns
-                        cols = st.columns(min(len(found_images), 3))  # Max 3 columns
-                        for j, img in enumerate(found_images[:3]):  # Show max 3 images
-                            try:
-                                cols[j].image(
-                                    img['working_path'], 
-                                    caption=f"{img['type']} {img['number']}",
-                                    width=200
-                                )
-                            except Exception as e:
-                                cols[j].write(f"Image: {img['filename']} (error: {e})")
-                
-                else:
-                    # No images found - show debug info
-                    st.write(f"**Images from {doc_name}:** (0 found)")
-                    if len(doc_images) > 0:
-                        with st.expander("Debug: Image paths not found", expanded=False):
-                            for img in doc_images:
-                                st.write(f"• {img['filename']}")
-                                if 'attempted_path' in img:
-                                    st.caption(f"  Tried: {img['attempted_path']}")
-                                st.caption(f"  Original: {img['path']}")
             
             st.write("**Content:**")
             st.write(source.get('document', 'No content available'))
@@ -372,10 +439,17 @@ def display_sidebar():
         
         # Show system info
         st.markdown("---")
+        st.header("🎯 Enhanced Citation System")
+        st.write("**🆕 NEW:** Paragraph-level citations")
+        st.write("**🔍 Features:** Answer attribution mapping")
+        st.write("**🎯 Precision:** Segment-to-paragraph matching")
+        st.write("**📊 Confidence:** Attribution scoring")
+        
+        st.markdown("---")
         st.header("🤖 Agent System")
         st.write("**Architecture:** Multi-Agent PydanticAI")
         st.write("**🔄 Status:** Temporary RAG-only mode")
-        st.write("**🔍 Available:** Document Q&A with RAG")
+        st.write("**🔍 Available:** Document Q&A with Enhanced Citations")
         st.write("**🔄 Coming Soon:** Full Agent Integration")
         
         st.markdown("---")
@@ -448,12 +522,16 @@ def main():
     if num_sources is None:
         return
     
-    # Initialize Agent system
-    rag_system = init_agent_system()
-    if rag_system is None:
-        st.error("Cannot proceed without agent system initialization")
+    # Initialize Enhanced Citation System
+    citation_systems = init_enhanced_citation_system()
+    if citation_systems is None:
+        st.error("Cannot proceed without enhanced citation system initialization")
         st.info("Please check your .env file and ensure GEMINI_API_KEY is set correctly")
         return
+    
+    rag_system = citation_systems['rag_system']
+    paragraph_extractor = citation_systems['paragraph_extractor']
+    attribution_mapper = citation_systems['attribution_mapper']
     
     # Validate RAG system type
     if not hasattr(rag_system, 'answer_question'):
@@ -468,13 +546,27 @@ def main():
     # Display chat history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-            
             # Show additional info for assistant messages
             if message["role"] == "assistant":
-                # Show sources for responses
-                if "sources" in message:
-                    display_sources(message["sources"])
+                # Check if this message has enhanced citations
+                if message.get("enhanced_citations") and "attributed_answer" in message:
+                    # Display enhanced answer with attributions
+                    display_attributed_answer(message["attributed_answer"])
+                    
+                    # Note: enhanced sources would need the attributed_answer object
+                    # For now, show legacy sources for chat history
+                    if "sources" in message:
+                        display_sources(message["sources"])
+                else:
+                    # Regular display for non-enhanced messages
+                    st.markdown(message["content"])
+                    
+                    # Show sources for responses
+                    if "sources" in message:
+                        display_sources(message["sources"])
+            else:
+                # User messages
+                st.markdown(message["content"])
     
     # Handle sample question selection
     selected_question = None
@@ -496,68 +588,105 @@ def main():
         with st.chat_message("user"):
             st.markdown(prompt)
         
-        # Generate response
+        # Generate response with enhanced citations
         with st.chat_message("assistant"):
             message_placeholder = st.empty()
             status_placeholder = st.empty()
             
             try:
-                status_placeholder.info("🤖 Processing with Coordinator Agent...")
+                status_placeholder.info("🤖 Processing with Enhanced Citation System...")
                 
-                # Verify RAG system is properly initialized
+                # Verify systems are properly initialized
                 if not rag_system or not hasattr(rag_system, 'answer_question'):
                     status_placeholder.error("RAG system not properly initialized")
                     st.error("System error: RAG system not available")
                     return
                 
-                # For now, use direct RAG system (agent integration coming soon)
-                status_placeholder.info(f"🔍 Searching documents with RAG system ({num_sources} sources)...")
+                # Step 1: Get RAG answer and sources
+                status_placeholder.info(f"🔍 Step 1: Searching documents ({num_sources} sources)...")
                 logger.info(f"Using {num_sources} sources for query: {prompt[:50]}...")
                 result = rag_system.answer_question(prompt, num_sources)
                 
-                # TODO: Re-enable agent system once Streamlit async issues are resolved
-                # try:
-                #     # Get agent and context for this session
-                #     coordinator, context = init_agent_for_session(rag_system)
-                #     result = await coordinator.handle_conversation(prompt, context)
-                # except Exception as agent_error:
-                #     logger.error(f"Agent system failed, using direct RAG: {agent_error}")
-                #     result = rag_system.answer_question(prompt, num_sources)
-                
-                status_placeholder.info("✅ Response generated!")
-                
-                # Handle RAG response (agent integration disabled for now)
                 if result.get('error') or "Error" in result.get("answer", ""):
                     message_placeholder.error(result["answer"])
                     st.session_state.messages.append({
                         "role": "assistant", 
                         "content": result["answer"]
                     })
-                else:
-                    # Display answer
-                    message_placeholder.markdown(result["answer"])
+                    status_placeholder.empty()
+                    return
+                
+                answer = result.get('answer', '')
+                sources = result.get('sources', [])
+                
+                # Step 2: Extract paragraphs
+                status_placeholder.info("📄 Step 2: Extracting paragraphs...")
+                paragraphs = paragraph_extractor.extract_paragraphs_from_sources(sources)
+                logger.info(f"Extracted {len(paragraphs)} paragraphs from {len(sources)} sources")
+                
+                # Step 3: Create attributed answer
+                status_placeholder.info("🎯 Step 3: Creating answer attribution...")
+                
+                # Use asyncio to handle the async function
+                import asyncio
+                try:
+                    # Try to get the current event loop, create one if it doesn't exist
+                    try:
+                        loop = asyncio.get_event_loop()
+                    except RuntimeError:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
                     
-                    # Display sources
-                    if result.get("sources"):
-                        display_sources(result["sources"])
+                    attributed_answer = loop.run_until_complete(
+                        attribution_mapper.create_attributed_answer(prompt, answer, paragraphs)
+                    )
+                except Exception as async_error:
+                    logger.error(f"Attribution async error: {async_error}")
+                    # Fallback to basic display
+                    attributed_answer = None
+                
+                status_placeholder.info("✅ Enhanced response generated!")
+                
+                # Step 4: Display enhanced results
+                if attributed_answer:
+                    # Format for display
+                    attributed_answer_data = attribution_mapper.format_attributed_answer_for_display(attributed_answer)
                     
-                    # Add assistant message to chat history
+                    # Display enhanced answer with attributions
+                    display_attributed_answer(attributed_answer_data)
+                    
+                    # Display enhanced paragraph-level sources
+                    display_enhanced_sources(attributed_answer)
+                    
+                    # Add to chat history with enhanced data
                     st.session_state.messages.append({
                         "role": "assistant", 
-                        "content": result["answer"],
-                        "sources": result.get("sources", []),
-                        "agent_response": False
+                        "content": answer,
+                        "sources": sources,
+                        "attributed_answer": attributed_answer_data,
+                        "enhanced_citations": True
                     })
+                else:
+                    # Fallback to basic display
+                    st.warning("Attribution mapping failed, showing basic citations")
+                    message_placeholder.markdown(answer)
+                    display_sources(sources)
                     
-                    # Show agent system note
-                    st.info("🤖 Agent system integration temporarily disabled for Streamlit compatibility. Using direct RAG system.")
+                    st.session_state.messages.append({
+                        "role": "assistant", 
+                        "content": answer,
+                        "sources": sources,
+                        "enhanced_citations": False
+                    })
                 
                 # Clear status
                 status_placeholder.empty()
                 
             except Exception as e:
-                error_msg = f"Streamlit error: {str(e)}"
+                error_msg = f"Enhanced citation error: {str(e)}"
                 logger.error(error_msg)
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 message_placeholder.error(error_msg)
                 status_placeholder.empty()
                 st.session_state.messages.append({
