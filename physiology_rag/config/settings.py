@@ -61,6 +61,18 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     
+    # Security Configuration
+    jwt_secret_key: str = ""
+    
+    @field_validator('jwt_secret_key')
+    @classmethod
+    def validate_jwt_secret(cls, v):
+        """Generate a random JWT secret if not provided."""
+        if not v:
+            import secrets
+            return secrets.token_urlsafe(32)
+        return v
+    
     @field_validator('gemini_api_key')
     @classmethod
     def validate_api_key(cls, v):
