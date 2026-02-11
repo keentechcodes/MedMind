@@ -54,6 +54,13 @@ dependencies = [
     "click>=8.1.8",
     "typer>=0.16.0",
     
+    # API Framework
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "python-multipart>=0.0.6",
+    "python-jose[cryptography]>=3.3.0",
+    "sse-starlette>=1.6.0",
+    
     # Additional core dependencies
     "requests>=2.32.3",
     "aiofiles>=24.1.0",
@@ -112,9 +119,9 @@ include = ["physiology_rag*"]
 [tool.setuptools.package-data]
 physiology_rag = ["*.json", "*.yaml", "*.yml"]
 
-# UV Configuration
-[tool.uv]
-dev-dependencies = [
+# Dependency Groups (UV modern format)
+[dependency-groups]
+dev = [
     # Testing
     "pytest>=8.4.0",
     "pytest-cov>=6.1.1", 
