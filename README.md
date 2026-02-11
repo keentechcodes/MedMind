@@ -279,6 +279,7 @@ uv run pytest -v --cov-report=html
 - [User Guide](docs/user_guide.md) - How to use the system
 - [API Documentation](docs/api.md) - Python API reference
 - [Development Guide](docs/development.md) - Contributing and development
+- [Refactor Strategy](docs/refactor-strategy.md) - Voyage AI migration & system refactor plan
 
 ## 🔧 Development
 
